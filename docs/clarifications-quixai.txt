@@ -1,0 +1,184 @@
+QUESTIONS DE CLARIFICATION — MISE EN PROD QUIXAI/HEXIS
+======================================================
+Reponds directement sous chaque question. Supprime le "→" et ecris ta reponse.
+
+
+A. MULTI-TENANT / MULTI-CHATBOT
+--------------------------------
+
+1. Un Hexis = un chatbot ou plusieurs ?
+   (Actuellement 1 agent = 1 instance PostgreSQL. Pour 3 chatbots Seduction/Closing/Acquisition : 3 instances ou 1 avec routage ?)
+
+   → une instance mais multichatbot possible d'apres hexis
+
+
+2. Isolation des clients abonnes ?
+   (Chaque abonne a sa propre memoire ? Ou tout le monde partage le meme contexte ?)
+
+   → ouais chaque abonne a sa propre memoire, mais beneficie aussi de l'entrainement de notre theorie tu vois
+
+
+3. Combien d'abonnes simultanes vises au lancement ?
+   (10 ? 100 ? 1000 ? Ca change toute l'infra)
+
+   → 10-100 personnes gros vps mais pas encore kubernetes justifie mais pret car dockerfile/docker-compose
+
+
+B. AUTH & ABONNEMENT
+---------------------
+
+4. Qui gere l'authentification des clients ?
+   (Hexis n'a AUCUN auth multi-user. Supabase Auth ? Auth0 ? Custom JWT ? Autre ?)
+
+   → 
+
+
+5. Stripe : tu reutilises le PaymentManager de zeprocess ou tu reconstruis ?
+   (Abonnement mensuel recurrent ou paiement unique ?)
+
+   → abonnement mensuel recurrent, l'idee est de faire de la retention de clients
+
+
+6. Un client qui ne paye plus — comment couper l'acces automatiquement ?
+
+   → juste on deactive son compte et au bout de 2 semaines on delete son compte
+
+
+7. Les 3 tiers de prix donnent acces a quoi exactement ?
+   - Tier 1 (97 EUR) : 20 euros chatter avec un agent
+   - Tier 2 (497 EUR/mois) : 90 euros acces a tous les agents 1X
+   - Tier 3 (1500+ EUR/mois) : 180 euros 5X
+
+   tout le reste plus cher amenra a du coaching terraon c'est plus cher
+   les agents our l'instant c'est du etxte donc on peut pas depasser les 200 euros je pense
+
+   →
+
+
+C. CONTENU & RAG
+-----------------
+
+8. Quel modele d'embedding on garde ?
+   (zeprocess utilise MiniLM 384-dim, Hexis utilise embeddinggemma 768-dim via Ollama)
+
+   → claude code fera de l'embeddings
+
+
+9. Deux bases de donnees : on fusionne ou on garde les deux ?
+   (zeprocess = rag_videos | Hexis = son propre schema 25 tables)
+
+   → tout dans HEXIS
+
+
+10. Workflow pour ajouter une nouvelle formation ?
+    (Upload video → transcription → ingestion → nouveau chatbot. Tout auto ou manuel ?)
+
+    → tout auto ouais
+
+
+11. Qualite RAG : chunking 60s de zeprocess ou ingestion sophistiquee de Hexis ?
+    (Hexis a fast/slow/hybrid avec appraisal emotionnel)
+
+    → sophistique on veut le hexis comme le meilleur
+
+
+D. INFRASTRUCTURE PROD
+-----------------------
+
+12. Ou deployer ?
+    (Hetzner VPS 17 EUR/mois ? AWS/GCP manage ? Hexis a besoin de PG16 + pgvector + Apache AGE + pgsql-http)
+
+    → OVH faudra savoir quelle offte VPS ou serveur dédié ? faudra dimmensionner avec les USer
+
+
+13. Ollama obligatoire en prod ?
+    (Hexis en depend pour les embeddings. Sur un VPS 4c/8GB avec tout le reste, ca tient ?)
+
+    → si on fait ollama ça va etre lent
+
+
+14. RabbitMQ necessaire ?
+    (Hexis l'utilise pour heartbeat/maintenance. Les chatbots vendus ont besoin du heartbeat autonome ou juste request/response ?)
+
+    → ouais heartbeat les graphes travailleront x fois par jour, rabbitmq est bien pour ça
+
+
+15. Domaine & SSL ?
+    (quixai.com ? hexis.ai ? Autre ? Qui gere le certificat ?)
+
+    → tqt on fera une machoine propre avec whitelistIp, limitatuions CPU/RAM, blocages de sports ...
+
+
+E. PRODUIT & UX
+-----------------
+
+16. Interface client : l'UI Next.js de Hexis ou une interface custom plus simple ?
+
+    → on veut faire une application Web plus tard donc un backend en Python fastapi, un frontend en React
+
+
+17. Canaux de livraison : web uniquement ou aussi Discord/Telegram/WhatsApp ?
+
+    → ouais agents Telgram Whatsapp discord bien sur on fait une api
+
+
+18. Personnalite du chatbot : characters customs par formation ? Qui ecrit le system prompt ?
+
+    → l'utilisateur aura des choix entre les systemes prompt
+
+
+19. Memoire par abonne : le chatbot se souvient des conversations precedentes de chaque client ?
+
+    → yes c'est ça
+
+
+F. SECURITE & LEGAL
+---------------------
+
+20. Les 80+ outils de Hexis : lesquels restent actifs en prod pour les clients ?
+    (shell, filesystem, browser, email — tout desactiver sauf memory + RAG ?)
+
+    → ouais c'est ça
+
+
+21. Donnees personnelles : ou stockees ? RGPD applicable ? Droit a l'effacement ?
+
+    → ouais rgpd, tout sur VPS/.serveur
+
+
+22. Content moderation : le contenu seduction est sensible. Risque legal ?
+
+    → ouais mais on manipule pas : on une approche directe dans les choses donc compliant metoo
+
+
+23. Prompt injection : comment empecher un abonne d'extraire le contenu de formation complet ?
+
+    → bonne question faudra clairtifier
+
+
+G. COUTS & UNIT ECONOMICS
+---------------------------
+
+24. Cout par message estime OK ?
+    (Claude Sonnet ~0.12$/msg a 40K tokens. 50 msgs/jour = 180$/mois. Le tier 497 EUR est-il rentable ?)
+
+    → on utilisera un abonnement claude caude qui nous entre 3K et 10K d'api pour seulement 174 reuros par mois c'est game changer
+
+
+25. Quel LLM en prod ?
+    (Claude ? GPT-4o-mini 10x moins cher ? Ollama local gratuit mais lent ? Mix ?)
+
+    → claude code max 174 euros
+
+
+26. Budget heartbeat : desactiver pour les chatbots vendus ?
+    (Le heartbeat consomme des tokens meme sans utilisateur actif)
+
+    →
+
+
+NOTES LIBRES
+-------------
+(Tout ce que tu veux ajouter qui n'est pas couvert ci-dessus)
+
+→
