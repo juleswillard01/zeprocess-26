@@ -1,0 +1,32 @@
+[Unit]
+Description=MEGA QUIXAI - Agent Closing (LangGraph)
+After=docker.service
+Requires=docker.service
+PartOf=mega-quixai.target
+
+[Service]
+Type=simple
+User=quixai
+Group=quixai
+WorkingDirectory=/opt/mega-quixai
+Environment="PYTHONUNBUFFERED=1"
+Environment="LOG_LEVEL=info"
+ExecStart=/opt/mega-quixai/venv/bin/python -m agents.closing.main
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=300
+StartLimitBurst=5
+
+MemoryLimit=1G
+CPUQuota=50%
+
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mega-quixai-closing
+
+[Install]
+WantedBy=mega-quixai.target

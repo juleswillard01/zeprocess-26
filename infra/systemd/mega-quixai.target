@@ -1,0 +1,7 @@
+[Unit]
+Description=MEGA QUIXAI Application Suite
+After=docker.service
+Wants=mega-quixai-agent-seduction.service mega-quixai-agent-closing.service mega-quixai-agent-acquisition.service
+
+[Install]
+WantedBy=multi-user.target

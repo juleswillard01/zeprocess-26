@@ -1,0 +1,329 @@
+================================================================================
+                   MEGA QUIXAI DEPLOYMENT INFRASTRUCTURE
+                            SUMMARY DOCUMENT
+================================================================================
+
+PROJECT: MEGA QUIXAI — 3 Autonomous AI Agents
+STACK: Python 3.12, LangGraph, LangChain, Claude Code SDK
+INFRASTRUCTURE: Docker Compose, PostgreSQL+pgvector, Redis, systemd
+
+================================================================================
+CREATED FILES
+================================================================================
+
+DOCUMENTATION:
+  ✓ /INFRASTRUCTURE.md              — Full infrastructure guide
+  ✓ /DEPLOYMENT_GUIDE.md            — Step-by-step deployment instructions
+  ✓ /infra/README.md                — Quick reference
+
+DOCKER CONFIGURATION:
+  ✓ /infra/docker/docker-compose.yml          — 5 services (nginx, api, postgres, redis, langfuse)
+  ✓ /infra/docker/Dockerfile.api              — Multi-stage Python 3.12 build
+
+REVERSE PROXY:
+  ✓ /infra/nginx/nginx.conf         — SSL/TLS, rate limiting, security headers
+
+SYSTEMD SERVICES (Autonomous Agents):
+  ✓ /infra/systemd/mega-quixai-agent-seduction.service
+  ✓ /infra/systemd/mega-quixai-agent-closing.service
+  ✓ /infra/systemd/mega-quixai-agent-acquisition.service
+  ✓ /infra/systemd/mega-quixai.target         — Orchestrate all agents
+
+DEPLOYMENT SCRIPTS:
+  ✓ /infra/scripts/backup.sh                  — Daily PostgreSQL backups
+  ✓ /infra/scripts/setup-firewall.sh          — UFW configuration
+  ✓ /infra/scripts/init-secrets.sh            — Generate .secrets/
+  ✓ /infra/scripts/post-deploy-check.sh       — Deployment verification
+
+CONFIGURATION:
+  ✓ /infra/config/schema.sql                  — PostgreSQL + pgvector schema
+  ✓ /infra/config/logging.yml                 — Centralized logging config
+  ✓ /infra/.env.example                       — Environment template
+
+CI/CD PIPELINE:
+  ✓ /.github/workflows/deploy.yml             — GitHub Actions (lint → test → build → deploy)
+
+AGENT BASE CLASS:
+  ✓ /agents/base.py                           — AutonomousAgent abstract class
+
+================================================================================
+ARCHITECTURE
+================================================================================
+
+VPS (Hetzner - €6.90/month)
+  └─ Ubuntu 24.04 LTS, 4 cores, 8GB RAM, 100GB SSD
+     │
+     ├─ Nginx (port 80/443)
+     │   └─ SSL/TLS termination, rate limiting
+     │
+     ├─ Docker Compose (5 services)
+     │   ├─ API (FastAPI, port 3000)
+     │   ├─ PostgreSQL 15 + pgvector (internal)
+     │   ├─ Redis 7 (internal)
+     │   ├─ LangFuse (port 3001, internal)
+     │   └─ All with health checks
+     │
+     └─ Systemd Units (3 agents)
+         ├─ mega-quixai-agent-seduction.service
+         ├─ mega-quixai-agent-closing.service
+         └─ mega-quixai-agent-acquisition.service
+
+================================================================================
+SECURITY FEATURES
+================================================================================
+
+✓ Non-root containers (appuser:1000)
+✓ SSL/TLS with Let's Encrypt (auto-renewal)
+✓ UFW firewall (deny by default, allow 22/80/443)
+✓ SSH key authentication only
+✓ Secrets in .secrets/ (gitignored, never committed)
+✓ Database isolated to internal network
+✓ Redis isolated to internal network
+✓ Rate limiting on all endpoints
+✓ Security headers (HSTS, X-Frame-Options, CSP, etc.)
+✓ Health check monitoring
+✓ Auto-restart on failure with exponential backoff
+✓ Log rotation and archival
+
+================================================================================
+DEPLOYMENT STEPS
+================================================================================
+
+PHASE 1: VPS Setup (30 min)
+  1. Provision Hetzner VPS (Ubuntu 24.04, 4core/8GB)
+  2. Update system packages
+  3. Install Docker + Docker Compose
+  4. Create quixai user
+  5. Clone repository
+
+PHASE 2: Secrets & Config (15 min)
+  1. Run ./infra/scripts/init-secrets.sh
+  2. Configure .env file
+  3. Add .secrets/ to .gitignore
+
+PHASE 3: Firewall (10 min)
+  1. Run ./infra/scripts/setup-firewall.sh
+  2. Verify ports 22, 80, 443 open
+
+PHASE 4: Docker Compose (20 min)
+  1. cd infra/docker && docker-compose up -d
+  2. Wait for all containers healthy
+  3. Test health endpoints
+
+PHASE 5: SSL/TLS (15 min)
+  1. Install certbot
+  2. Obtain certificate with certbot
+  3. Copy to /opt/mega-quixai/infra/ssl/
+  4. Restart nginx
+
+PHASE 6: Systemd Agents (15 min)
+  1. Copy systemd files to /etc/systemd/system/
+  2. systemctl daemon-reload
+  3. systemctl start mega-quixai.target
+  4. Verify agents running
+
+PHASE 7: Backups (10 min)
+  1. Create /var/backups/mega-quixai/
+  2. Setup cron job for backups
+  3. Test backup/restore
+
+PHASE 8: Verification (10 min)
+  1. Run ./infra/scripts/post-deploy-check.sh
+  2. Verify all health checks pass
+
+PHASE 9: Monitoring (20 min, optional)
+  1. Setup Grafana dashboard
+  2. Configure alerting rules
+
+PHASE 10: CI/CD (10 min)
+  1. Configure GitHub secrets
+  2. Test deployment pipeline
+
+TOTAL TIME: 2-3 hours
+
+================================================================================
+COST ESTIMATION
+================================================================================
+
+MONTHLY:
+  VPS (Hetzner 4core/8GB/100GB)    €6.90
+  Backup storage (S3)              €2.50
+  API calls (Anthropic, ~100/day)  ~€8.00
+  Domain (.com)                    ~€0.85
+  ────────────────────────────────────
+  TOTAL                            €18.25/month
+
+ANNUAL:
+  Year 1: €243
+  Year 2+: €355
+
+SCALING (when leads > 5000/day):
+  3x VPS (load balanced)           €20.70/month
+  Same API + backup costs
+  Total: ~€31-35/month
+
+================================================================================
+KEY FEATURES
+================================================================================
+
+✓ AUTONOMOUS: Agents run 24/7 in background via systemd
+✓ RESILIENT: Auto-restart on failure, exponential backoff
+✓ OBSERVABLE: Health checks, Redis heartbeat, centralized logging
+✓ SCALABLE: Vertical (single VPS), horizontal (multiple VPS)
+✓ SECURE: SSL/TLS, firewall, secrets management, non-root
+✓ MONITORED: Health endpoints, metrics, logs, alerts
+✓ AUTOMATED: CI/CD pipeline, backups, SSL renewal
+✓ COST-EFFECTIVE: €18-20/month for MVP, scales to 10k leads/day
+
+================================================================================
+MONITORING & OBSERVABILITY
+================================================================================
+
+HEALTH ENDPOINTS:
+  GET /health                       → API + components status
+  Redis GET agent:*:health          → Agent heartbeat (300s TTL)
+
+LOGS:
+  docker-compose logs -f api        → API logs
+  docker-compose logs -f postgres   → Database logs
+  journalctl -u mega-quixai.target  → All agent logs
+
+METRICS (optional):
+  Prometheus: /metrics
+  Grafana dashboard: port 3002
+  LangFuse: port 3001
+
+ALERTS (optional):
+  Agent health check failed
+  API response time > 5s
+  Database connection dropped
+  Disk space < 20%
+  Memory usage > 80%
+
+================================================================================
+BACKUP & RECOVERY
+================================================================================
+
+BACKUP STRATEGY:
+  Frequency: Daily at 2 AM UTC
+  Retention: 30 days
+  Location: /var/backups/mega-quixai/
+  Format: gzipped SQL dump
+  Size: ~50-100 MB per backup
+
+RECOVERY PROCEDURE:
+  1. Stop API: systemctl stop mega-quixai.service
+  2. Restore: ./scripts/restore.sh <backup-file.sql.gz>
+  3. Start API: systemctl start mega-quixai.service
+
+TIME TO RECOVER: ~5 minutes
+
+================================================================================
+CI/CD PIPELINE
+================================================================================
+
+GitHub Actions Workflow (.github/workflows/deploy.yml)
+
+STAGES:
+  1. Lint (ruff)           → Check code style, imports
+  2. Test (pytest)         → Unit tests, coverage >= 80%
+  3. Build (Docker)        → Multi-stage, push to ghcr.io
+  4. Deploy (SSH)          → Pull, restart services (approval required)
+
+TRIGGERS:
+  - Push to main           → All stages + deploy (manual approval)
+  - Push to staging        → Lint, test, build
+  - Pull request to main   → Lint, test
+
+TIME: ~5-10 minutes per stage
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+AGENT STUCK IN RESTART LOOP:
+  $ journalctl -u mega-quixai-agent-seduction -n 50
+  $ curl http://localhost/health
+  $ docker-compose logs postgres
+
+POSTGRESQL CONNECTION REFUSED:
+  $ docker exec mega-quixai-postgres pg_isready -U quixai_user
+  $ docker-compose restart postgres
+
+DISK SPACE FULL:
+  $ find /var/log -name "*.log" -mtime +30 -delete
+  $ docker system prune -a --volumes
+
+MEMORY LEAK:
+  $ docker stats
+  $ docker-compose restart api
+
+PORT ALREADY IN USE:
+  $ lsof -i :3000
+  $ kill -9 <PID>
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. IMMEDIATE:
+   - Review INFRASTRUCTURE.md and DEPLOYMENT_GUIDE.md
+   - Provision Hetzner VPS
+   - Follow deployment steps
+
+2. WEEK 1:
+   - Setup VPS, Docker, firewall
+   - Deploy Docker Compose services
+   - Verify all health checks
+
+3. WEEK 2:
+   - Implement 3 agent classes (inherit from AutonomousAgent)
+   - Deploy systemd services
+   - Test agent restart behavior
+
+4. WEEK 3:
+   - Setup CI/CD pipeline
+   - Test full deployment workflow
+   - Configure monitoring
+
+5. WEEK 4:
+   - Add alerting rules
+   - Load testing
+   - Go live
+
+================================================================================
+SUPPORT & REFERENCES
+================================================================================
+
+DOCUMENTATION:
+  /INFRASTRUCTURE.md        — Full technical guide
+  /DEPLOYMENT_GUIDE.md      — Step-by-step instructions
+  /infra/README.md          — Quick reference
+
+EXTERNAL REFERENCES:
+  Docker Compose:           https://docs.docker.com/compose/
+  PostgreSQL pgvector:      https://github.com/pgvector/pgvector
+  LangGraph:               https://langchain-ai.github.io/langgraph/
+  systemd:                 https://systemd.io/
+  Nginx:                   https://nginx.org/en/docs/
+  Let's Encrypt:           https://letsencrypt.org/
+
+================================================================================
+QUESTIONS?
+================================================================================
+
+1. Check logs first:
+   - Docker: docker-compose logs -f <service>
+   - Systemd: journalctl -u mega-quixai-* -f
+   - App: tail -f /var/log/mega-quixai/app.log
+
+2. Run verification:
+   - ./infra/scripts/post-deploy-check.sh
+
+3. Review guides:
+   - INFRASTRUCTURE.md (architecture)
+   - DEPLOYMENT_GUIDE.md (step-by-step)
+
+================================================================================
+                            END OF SUMMARY
+================================================================================
