@@ -1,93 +1,43 @@
-"""Pytest fixtures and configuration."""
+"""Pytest fixtures and configuration for Phase 1 orchestration."""
 
 from __future__ import annotations
 
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 
-from agents.closing.state_machine import ClosingState, Message, ProspectProfile
+from src.state.schema import ConversationState, GraphState, Lead, Source
 
 
 @pytest.fixture
-def mock_prospect() -> ProspectProfile:
-    """Create mock prospect for testing."""
-    return ProspectProfile(
-        id="prospect_123",
-        name="John Doe",
-        email="john@example.com",
-        phone="+1234567890",
-        whatsapp_id="1234567890",
-        segment="high_value",
-        pain_points=["scaling", "customer retention"],
-        budget_range="$50k-100k",
-        qualification_score=0.85,
-        created_at=datetime.now(),
-        notes="Test prospect",
+def sample_lead() -> Lead:
+    """Create a sample lead for testing."""
+    return Lead(
+        lead_id="test-lead-001",
+        source=Source.INSTAGRAM,
+        profile_url="https://instagram.com/test_user",
+        username="test_user",
+        email="test@example.com",
+        metadata={"age": 28, "interests": ["dating", "self-improvement"]},
     )
 
 
 @pytest.fixture
-def mock_closing_state(mock_prospect: ProspectProfile) -> ClosingState:
-    """Create mock closing state for testing."""
-    return ClosingState(
-        prospect=mock_prospect,
-        messages=[
-            Message(
-                role="assistant",
-                content="Hi John, interested in learning more?",
-                timestamp=datetime.now(),
-            )
-        ],
-        conversation_turns=1,
-        stage="opening_sent",
+def sample_conversation_state(sample_lead: Lead) -> ConversationState:
+    """Create a sample conversation state."""
+    return ConversationState(
+        conversation_id="conv-001",
+        lead_id=sample_lead.lead_id,
+        messages=[],
     )
 
 
 @pytest.fixture
-async def mock_llm_interface() -> AsyncMock:
-    """Create mock LLM interface."""
-    mock = AsyncMock()
-    mock.generate.return_value = ("Generated response", 100, 0.0003)
-    mock.classify.return_value = "price"
-    mock.extract_objection.return_value = {
-        "type": "price",
-        "severity": 0.8,
-        "key_phrase": "Too expensive",
-    }
-    mock.generate_counter_argument.return_value = "Here's why this investment is worth it..."
-    return mock
-
-
-@pytest.fixture
-async def mock_rag_interface() -> AsyncMock:
-    """Create mock RAG interface."""
-    mock = AsyncMock()
-    mock.search.return_value = [
-        {
-            "id": "1",
-            "source": "training_video_1",
-            "content": "Pricing strategy for high-value customers",
-            "similarity": 0.92,
-            "metadata": {"segment": "high_value"},
-        }
-    ]
-    return mock
-
-
-@pytest.fixture
-async def mock_payment_manager() -> AsyncMock:
-    """Create mock payment manager."""
-    mock = AsyncMock()
-    mock.create_checkout_session.return_value = (
-        "session_123",
-        "https://checkout.stripe.com/pay/session_123",
+def sample_graph_state(
+    sample_lead: Lead, sample_conversation_state: ConversationState
+) -> GraphState:
+    """Create a sample graph state."""
+    return GraphState(
+        lead=sample_lead,
+        conversation=sample_conversation_state,
+        current_agent="supervisor",
+        messages=[],
     )
-    mock.verify_payment.return_value = {
-        "status": "paid",
-        "session_id": "session_123",
-        "amount_usd": 50.0,
-        "payment_id": "pi_123",
-    }
-    return mock
