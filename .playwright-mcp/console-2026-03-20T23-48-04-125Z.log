@@ -1,0 +1,30 @@
+[     792ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/experimentation/getTreatmentAssignment:0
+[     929ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/clientlog:0
+[     931ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/clientlog:0
+[    1042ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/user/UserInfo:0
+[    1170ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/clientlog:0
+[    6753ms] Identifier 'scriptTageName' has already been declared
+[   15967ms] Identifier 'scriptTageName' has already been declared
+[   15968ms] Identifier 'scriptTageName' has already been declared
+[   16174ms] Identifier 'scriptTageName' has already been declared
+[   16175ms] Identifier 'scriptTageName' has already been declared
+[   16176ms] Identifier 'scriptTageName' has already been declared
+[   16177ms] Identifier 'scriptTageName' has already been declared
+[   16177ms] Identifier 'scriptTageName' has already been declared
+[   16178ms] Identifier 'scriptTageName' has already been declared
+[   16276ms] Identifier 'scriptTageName' has already been declared
+[   16277ms] Identifier 'scriptTageName' has already been declared
+[   16279ms] Identifier 'scriptTageName' has already been declared
+[   16281ms] Identifier 'scriptTageName' has already been declared
+[   16281ms] Identifier 'scriptTageName' has already been declared
+[   16282ms] Identifier 'scriptTageName' has already been declared
+[   16282ms] Identifier 'scriptTageName' has already been declared
+[   16282ms] Identifier 'scriptTageName' has already been declared
+[   16291ms] Identifier 'scriptTageName' has already been declared
+[   16460ms] Identifier 'scriptTageName' has already been declared
+[   16460ms] Identifier 'scriptTageName' has already been declared
+[   16778ms] Identifier 'scriptTageName' has already been declared
+[   16779ms] Identifier 'scriptTageName' has already been declared
+[   16779ms] Identifier 'scriptTageName' has already been declared
+[   16780ms] Identifier 'scriptTageName' has already been declared
+[   16780ms] Identifier 'scriptTageName' has already been declared

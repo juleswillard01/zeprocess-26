@@ -1,0 +1,4 @@
+[     948ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/experimentation/getTreatmentAssignment:0
+[    1085ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/clientlog:0
+[    1086ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/clientlog:0
+[    1123ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://signup.azure.com/api/user/UserInfo:0
