@@ -1,0 +1,56 @@
+[     626ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[     626ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'battery'. @ :0
+[    2212ms] [ERROR] Refused to frame 'https://portal.azure.com/' because an ancestor violates the following Content Security Policy directive: "frame-ancestors 'self'".
+ @ :0
+[   47016ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://login.live.com/favicon.ico:0
+[   48784ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://management.azure.com/providers/Microsoft.PortalServices/settings/default?api-version=2024-09-01-preview:0
+[   49130ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://graph.microsoft.com/v1.0/organization/f8cdef31-a31e-4b4a-93e4-5f571e91255a:0
+[   49178ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[   49178ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'battery'. @ :0
+[   50450ms] [WARNING] Unrecognized feature: 'local-network-access'. @ https://portal.azure.com/Content/Dynamic/v_g7_mjLCM31.js:50
+[   50876ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[   50876ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'battery'. @ :0
+[   51420ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://management.azure.com/providers/Microsoft.PortalServices/settings/default?api-version=2025-09-01-preview:0
+[   51431ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Authentication/appId/c44b4083-3bb0-49c1-b47d-974e53cbdf3c:0
+[   51465ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://management.azure.com/providers/Microsoft.PortalServices/settings/default?api-version=2025-09-01-preview:0
+[   51542ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://graph.microsoft.com/v1.0/me/photo/$value:0
+[   52762ms] [ERROR] [Microsoft_AAD_RegisteredApps]  12:42:41 AM MsPortalFx.Base.Diagnostics.ErrorReporter 1 MsPortalFx.Base.Diagnostics.ErrorReporter: _errorData: {"readyState":4,"responseText":"{\"error\":{\"code\":\"Request_BadRequest\",\"message\":\"Unsupported token. Unable to initialize the authorization context.\",\"innerError\":{\"date\":\"2026-03-20T23:42:41\",\"request-id\":\"c3eec638-795c-4a5a-9b02-df39eb94c1e1\",\"client-request-id\":\"fb127237-d541-4222-9d28-802e3e5789c7\"}}}","responseJSON":{"error":{"code":"Request_BadRequest","message":"Unsupported token. Unable to initialize the authorization context.","innerError":{"date":"2026-03-20T23:42:41","request-id":"c3eec638-795c-4a5a-9b02-df39eb94c1e1","client-request-id":"fb127237-d541-4222-9d28-802e3e5789c7"}}},"status":400,"statusText":"error"}
+baseTypes: ["MsPortalFx.Errors.FetchDataError","MsPortalFx.Errors.DataError","MsPortalFx.Errors.Error"]
+data: {"dataSetName":"DataCache:1:3","errorData":{"readyState":4,"responseText":"{\"error\":{\"code\":\"Request_BadRequest\",\"message\":\"Unsupported token. Unable to initialize the authorization context.\",\"innerError\":{\"date\":\"2026-03-20T23:42:41\",\"request-id\":\"c3eec638-795c-4a5a-9b02-df39eb94c1e1\",\"client-request-id\":\"fb127237-d541-4222-9d28-802e3e5789c7\"}}}","responseJSON":{"error":{"code":"Request_BadRequest","message":"Unsupported token. Unable to initialize the authorization context.","innerError":{"date":"2026-03-20T23:42:41","request-id":"c3eec638-795c-4a5a-9b02-df39eb94c1e1","client-request-id":"fb127237-d541-4222-9d28-802e3e5789c7"}}},"status":400,"statusText":"error"}}
+dataSetName: DataCache:1:3
+errorData: {"readyState":4,"responseText":"{\"error\":{\"code\":\"Request_BadRequest\",\"message\":\"Unsupported token. Unable to initialize the authorization context.\",\"innerError\":{\"date\":\"2026-03-20T23:42:41\",\"request-id\":\"c3eec638-795c-4a5a-9b02-df39eb94c1e1\",\"client-request-id\":\"fb127237-d541-4222-9d28-802e3e5789c7\"}}}","responseJSON":{"error":{"code":"Request_BadRequest","message":"Unsupported token. Unable to initialize the authorization context.","innerError":{"date":"2026-03-20T23:42:41","request-id":"c3eec638-795c-4a5a-9b02-df39eb94c1e1","client-request-id":"fb127237-d541-4222-9d28-802e3e5789c7"}}},"status":400,"statusText":"error"}
+errorLevel: 2
+extension: Microsoft_AAD_RegisteredApps
+innerErrors: []
+message: FetchDataError: data set DataCache:1:3
+name: FetchDataError
+stack: FetchDataError: FetchDataError: data set DataCache:1:3
+    at https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:1:290920
+    at https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:1:291056
+timestamp: 3009.60000000149
+type: MsPortalFx.Errors.FetchDataError
+ {error: Object} @ https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:0
+[   52780ms] [ERROR] [Microsoft_AAD_RegisteredApps]  12:42:41 AM RegisteredApps/Logging/Mds NaN Mds: Microsoft_AAD_RegisteredApps.AuthenticationV2Blade.HandledError {error: Object} {errorCode: Request_BadRequest, httpVerb: error, httpEndpoint: https://graph.microsoft.com/beta/myorganization/ap…974e53cbdf3c')?$select=signInAudienceRestrictions, httpErrorCode: 400, requestId: 8d4b6c6e-62a7-4c88-85c4-e0779947a5e8} @ https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:0
+[   52784ms] [ERROR] [Microsoft_AAD_RegisteredApps]  12:42:41 AM MsPortalFx.Base.Diagnostics.ErrorReporter 1 MsPortalFx.Base.Diagnostics.ErrorReporter: baseTypes: ["MsPortalFx.Errors.AjaxError","MsPortalFx.Errors.Error"]
+data: {"uri":"https://graph.microsoft.com/beta/myorganization/applications(appId='c44b4083-3bb0-49c1-b47d-974e53cbdf3c')?$select=signInAudienceRestrictions","type":"GET","pathAndQuery":"","requestId":"2d2d9955-fadb-497a-98a4-d5c8de736002","failureCause":"","sessionId":"9bd7f45f59fe4fb5a6786786831805df","status":400,"statusText":"error","duration":91.5}
+errorLevel: 2
+errorThrown: 
+extension: Microsoft_AAD_RegisteredApps
+innerErrors: []
+jqXHR: {"readyState":4,"responseText":"{\"error\":{\"code\":\"Request_BadRequest\",\"message\":\"Unsupported token. Unable to initialize the authorization context.\",\"innerError\":{\"date\":\"2026-03-20T23:42:41\",\"request-id\":\"8d4b6c6e-62a7-4c88-85c4-e0779947a5e8\",\"client-request-id\":\"fb127237-d541-4222-9d28-802e3e5789c7\"}}}","responseJSON":{"error":{"code":"Request_BadRequest","message":"Unsupported token. Unable to initialize the authorization context.","innerError":{"date":"2026-03-20T23:42:41","request-id":"8d4b6c6e-62a7-4c88-85c4-e0779947a5e8","client-request-id":"fb127237-d541-4222-9d28-802e3e5789c7"}}},"status":400,"statusText":"error"}
+message: ajaxExtended call failed
+name: AjaxError
+stack: AjaxError: ajaxExtended call failed
+    at F.reject (https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:1:141141)
+    at Object.<anonymous> (https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:1:140925)
+    at u (https://portal.azure.com/Content/Dynamic/s4mJODyl_8L8.js:13:26637)
+    at c (https://portal.azure.com/Content/Dynamic/s4mJODyl_8L8.js:13:26939)
+textStatus: error
+timestamp: 3028.800000000745
+type: MsPortalFx.Errors.AjaxError
+ {error: Object} @ https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:0
+[   52809ms] [ERROR] [Microsoft_AAD_RegisteredApps]  12:42:41 AM Parts 1 Parts: Sanitization error found in following extension(Microsoft_AAD_RegisteredApps) styleSheets:
+[0]Microsoft_AAD_RegisteredApps-[1]AuthenticationV3Blade-[2]TemplateBladeVirtualLens-[5]AuthenticationV3Blade - Blades/AuthenticationV3Styles.css - Invalid CSS property - Selectors can only refer to extension-specific class names (those starting with .ext- or .fxt-)
+CSS rule: .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection button svg, .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection .msportalfx-svg-placeholder, .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection [class*="toolbar"] button svg, .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection [class*="toolbar"] .msportalfx-svg-placeholder { fill: rgb(255, 255, 255); },
+[0]Microsoft_AAD_RegisteredApps-[1]AuthenticationV3Blade-[2]TemplateBladeVirtualLens-[5]AuthenticationV3Blade - Blades/AuthenticationV3Styles.css - Invalid CSS property - Selectors can only refer to extension-specific class names (those starting with .ext- or .fxt-)
+CSS rule: .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection button svg, .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection .msportalfx-svg-placeholder, .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection [class*="toolbar"] button svg, .ext-mode-dark .ext-ad-registeredApps-authenticationBlade-tabSection [class*="toolbar"] .msportalfx-svg-placeholder { fill: rgb(255, 255, 255); } {error: Object} @ https://portal.azure.com/Content/Dynamic/Dzkgqd4Ddgq1.js:0
