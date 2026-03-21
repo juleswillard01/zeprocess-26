@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint typecheck format docker-build docker-run tree export export-txt auth clean
+.PHONY: install test test-cov lint typecheck format docker-build docker-run tree export export-txt export-all-txt export-all-pdf auth clean
 
 install:
 	uv sync --all-extras
@@ -34,6 +34,12 @@ export:
 
 export-txt:
 	uv run python -m src.cli export --format txt
+
+export-all-txt:
+	uv run python -m src.cli export --all --format txt
+
+export-all-pdf:
+	uv run python -m src.cli export --all --format pdf
 
 auth:
 	uv run python -m src.cli auth

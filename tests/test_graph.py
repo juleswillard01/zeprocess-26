@@ -372,6 +372,12 @@ class TestGraphClient:
         ):
             await client.list_notebooks()
 
+    def test_update_token_changes_stored_token(self) -> None:
+        """update_token doit remplacer le token stocké."""
+        client = GraphClient(access_token="old-token")
+        client.update_token("new-token")
+        assert client._token == "new-token"
+
 
 class TestDownloadResource:
     """Tests pour le téléchargement de ressources binaires."""

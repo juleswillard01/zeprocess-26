@@ -3,7 +3,7 @@
 ## Secrets
 - JAMAIS de secrets dans le code source
 - JAMAIS commit `.env` ou fichiers contenant des tokens
-- Tokens OAuth stockés en mémoire uniquement, jamais sur disque
+- Tokens OAuth en cache local `io/cache/msal_cache.bin`, permissions `chmod 600`, jamais committés dans git
 - `.gitignore` DOIT exclure `.env`, `.env.*`, `io/cache/tokens*`
 
 ## Authentification

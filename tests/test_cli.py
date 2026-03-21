@@ -76,7 +76,7 @@ class TestAuthCommand:
         """La commande auth doit appeler authenticate()."""
         runner = CliRunner()
         with patch("src.cli.authenticate") as mock_auth:
-            mock_auth.return_value = "test-token-12345"
+            mock_auth.return_value = ("test-token-12345", MagicMock())
             runner.invoke(main, ["auth"])
             mock_auth.assert_called_once()
 
@@ -84,7 +84,7 @@ class TestAuthCommand:
         """La commande auth doit afficher un message de succès."""
         runner = CliRunner()
         with patch("src.cli.authenticate") as mock_auth:
-            mock_auth.return_value = "test-token-12345"
+            mock_auth.return_value = ("test-token-12345", MagicMock())
             result = runner.invoke(main, ["auth"])
             assert "auth" in result.output.lower() or "success" in result.output.lower()
 
@@ -112,7 +112,7 @@ class TestAuthCommand:
         """La commande auth doit retourner 0 en cas de succès."""
         runner = CliRunner()
         with patch("src.cli.authenticate") as mock_auth:
-            mock_auth.return_value = "valid-token"
+            mock_auth.return_value = ("valid-token", MagicMock())
             result = runner.invoke(main, ["auth"])
             assert result.exit_code == 0
 
@@ -132,7 +132,7 @@ class TestTreeCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_SINGLE_NOTEBOOK)),
             patch("src.cli.display_tree", return_value="Test NB\n  5 pages"),
@@ -147,7 +147,7 @@ class TestTreeCommand:
         mock_build = AsyncMock(return_value=_EMPTY_NODES)
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=mock_build),
             patch("src.cli.display_tree", return_value=""),
@@ -163,7 +163,7 @@ class TestTreeCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token") as mock_auth,
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())) as mock_auth,
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
             patch("src.cli.display_tree", return_value=""),
@@ -178,7 +178,7 @@ class TestTreeCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=nodes)),
             patch("src.cli.display_tree") as mock_display,
@@ -193,7 +193,7 @@ class TestTreeCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
             patch("src.cli.display_tree", return_value=""),
@@ -242,9 +242,10 @@ class TestExportCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(5))),
         ):
             result = runner.invoke(main, ["export", "--sections", "sec1,sec2"])
@@ -256,9 +257,10 @@ class TestExportCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(10))),
         ):
             result = runner.invoke(main, ["export", "--all"])
@@ -275,11 +277,29 @@ class TestExportCommand:
         runner = CliRunner()
         mock_client = _make_graph_client_mock()
         mock_export = AsyncMock(return_value=_make_export_report(2))
+        # Un arbre avec une section contenant des pages pour déclencher export_batch
+        nodes_with_pages = [
+            HierarchyNode(
+                name="NB",
+                node_type="notebook",
+                id="nb-1",
+                children=[
+                    HierarchyNode(
+                        name="Section A",
+                        node_type="section",
+                        id="s-1",
+                        page_count=2,
+                        page_ids=["p-1", "p-2"],
+                    )
+                ],
+            )
+        ]
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
-            patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
+            patch("src.cli.build_tree", new=AsyncMock(return_value=nodes_with_pages)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=mock_export),
         ):
             runner.invoke(main, ["export", "--all"])
@@ -291,9 +311,10 @@ class TestExportCommand:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(1))),
         ):
             result = runner.invoke(main, ["export"])
@@ -330,9 +351,10 @@ class TestExportConfirmation:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=many_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(0))),
         ):
             result = runner.invoke(main, ["export", "--all", "--max-pages", "201"], input="n\n")
@@ -345,9 +367,10 @@ class TestExportConfirmation:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=many_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(0))),
         ):
             result = runner.invoke(main, ["export", "--all", "--max-pages", "201"], input="n\n")
@@ -375,9 +398,10 @@ class TestExportConfirmation:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=small_tree)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(10))),
         ):
             result = runner.invoke(main, ["export", "--all"])
@@ -488,7 +512,7 @@ class TestVerboseLogging:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
             patch("src.cli.display_tree", return_value=""),
@@ -523,7 +547,7 @@ class TestContextPassing:
         runner = CliRunner()
 
         with patch("src.cli.authenticate") as mock_auth:
-            mock_auth.return_value = "token"
+            mock_auth.return_value = ("token", MagicMock())
             result = runner.invoke(main, ["--verbose", "auth"])
             assert result is not None
 
@@ -533,7 +557,7 @@ class TestContextPassing:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
             patch("src.cli.display_tree", return_value=""),
@@ -546,37 +570,26 @@ class TestSingleEventLoop:
     """Tests H2 — tree et export utilisent asyncio.run pour les appels async."""
 
     def test_tree_command_calls_asyncio_run(self) -> None:
-        """tree doit appeler asyncio.run pour build_tree et client.close."""
+        """tree doit appeler asyncio.run une fois avec _async_tree."""
         runner = CliRunner()
-        mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
-            patch("src.cli.GraphClient", return_value=mock_client),
-            patch("src.cli.asyncio.run") as mock_run,
-            patch("src.cli.display_tree", return_value="output"),
-            patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
+            patch("src.cli._async_tree", new=AsyncMock(return_value=None)) as mock_async_tree,
         ):
-            # asyncio.run is still called twice: for build_tree and client.close
-            mock_run.side_effect = [_EMPTY_NODES, None]
             runner.invoke(main, ["tree"])
-            assert mock_run.call_count >= 1
+            mock_async_tree.assert_called_once()
 
     def test_export_command_calls_asyncio_run(self) -> None:
-        """export doit appeler asyncio.run pour build_tree, export_batch et close."""
+        """export doit appeler asyncio.run une fois avec _async_export."""
         runner = CliRunner()
-        mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
-            patch("src.cli.GraphClient", return_value=mock_client),
-            patch("src.cli.asyncio.run") as mock_run,
-            patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
-            patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(0))),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
+            patch("src.cli._async_export", new=AsyncMock(return_value=None)) as mock_async_export,
         ):
-            mock_run.side_effect = [_EMPTY_NODES, _make_export_report(0), None]
             runner.invoke(main, ["export", "--all"])
-            assert mock_run.call_count >= 1
+            mock_async_export.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -640,6 +653,30 @@ class TestParseSelection:
         from src.cli import _parse_selection
 
         assert _parse_selection("3-7", 5) == [3, 4, 5]
+
+    def test_parse_double_comma_ignores_empty_part(self) -> None:
+        """'1,,3' doit retourner [1, 3] (partie vide ignorée)."""
+        from src.cli import _parse_selection
+
+        assert _parse_selection("1,,3", 5) == [1, 3]
+
+    def test_parse_invalid_range_string_ignored(self) -> None:
+        """'a-b' dans une plage doit être ignoré sans exception."""
+        from src.cli import _parse_selection
+
+        assert _parse_selection("a-b", 5) == []
+
+    def test_parse_invalid_single_string_ignored(self) -> None:
+        """'abc' comme index individuel doit être ignoré sans exception."""
+        from src.cli import _parse_selection
+
+        assert _parse_selection("abc", 5) == []
+
+    def test_parse_mixed_valid_and_invalid(self) -> None:
+        """'1,abc,3' doit retourner [1, 3] (abc ignoré)."""
+        from src.cli import _parse_selection
+
+        assert _parse_selection("1,abc,3", 5) == [1, 3]
 
 
 # ---------------------------------------------------------------------------
@@ -742,9 +779,10 @@ class TestInteractiveMode:
         tree_nodes = _make_section_tree()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(0))),
             patch("src.cli._is_interactive", return_value=True),
         ):
@@ -758,9 +796,10 @@ class TestInteractiveMode:
         tree_nodes = _make_section_tree()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(2))),
             patch("src.cli._is_interactive", return_value=True),
         ):
@@ -774,9 +813,10 @@ class TestInteractiveMode:
         tree_nodes = _make_section_tree()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=AsyncMock(return_value=_make_export_report(3))),
             patch("src.cli._is_interactive", return_value=True),
         ):
@@ -795,9 +835,10 @@ class TestInteractiveMode:
             return _make_export_report(len(pages))
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=mock_export_batch),
             patch("src.cli._is_interactive", return_value=True),
         ):
@@ -815,9 +856,10 @@ class TestInteractiveMode:
         mock_export = AsyncMock(return_value=_make_export_report(0))
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=mock_export),
             patch("src.cli._is_interactive", return_value=False),
         ):
@@ -854,9 +896,10 @@ class TestPageTitlesInExport:
             return _make_export_report(len(pages))
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=mock_export_batch),
             patch("src.cli._is_interactive", return_value=False),
         ):
@@ -885,9 +928,10 @@ class TestPageTitlesInExport:
             return _make_export_report(len(pages))
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
             patch("src.cli.export_batch", new=mock_export_batch),
             patch("src.cli._is_interactive", return_value=False),
         ):
@@ -943,10 +987,261 @@ class TestNotebookOption:
         mock_client = _make_graph_client_mock()
 
         with (
-            patch("src.cli.authenticate", return_value="test-token"),
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
             patch("src.cli.GraphClient", return_value=mock_client),
             patch("src.cli.build_tree", new=AsyncMock(return_value=_EMPTY_NODES)),
             patch("src.cli.display_tree", return_value=""),
         ):
             result = runner.invoke(main, ["--notebook", "MyNB", "tree"])
             assert result.exit_code == 0
+
+
+class TestResumeOption:
+    """Tests pour l'option --resume."""
+
+    def test_export_has_resume_option(self) -> None:
+        """La commande export doit avoir --resume/--no-resume."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["export", "--help"])
+        assert "--resume" in result.output
+
+
+class TestNoEventLoopCrash:
+    """Vérifie que l'export multi-sections ne crash pas avec 'Event loop is closed'."""
+
+    def test_export_multiple_sections_single_event_loop(self) -> None:
+        """L'export de 2+ sections doit utiliser un seul event loop (pas de crash)."""
+        runner = CliRunner()
+
+        sec_a = HierarchyNode(
+            name="Sec A",
+            node_type="section",
+            id="s-a",
+            page_count=2,
+            page_ids=["p-a1", "p-a2"],
+        )
+        sec_b = HierarchyNode(
+            name="Sec B",
+            node_type="section",
+            id="s-b",
+            page_count=1,
+            page_ids=["p-b1"],
+        )
+        tree_nodes = [
+            HierarchyNode(
+                name="NB",
+                node_type="notebook",
+                id="nb-1",
+                children=[sec_a, sec_b],
+            )
+        ]
+
+        mock_report = _make_export_report(2)
+
+        with (
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
+            patch("src.cli.refresh_token", return_value="test-token"),
+            patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.export_batch", new=AsyncMock(return_value=mock_report)),
+            patch("src.cli.GraphClient") as mock_gc,
+        ):
+            mock_client = MagicMock()
+            mock_client.close = AsyncMock()
+            mock_client.update_token = MagicMock()
+            mock_gc.return_value = mock_client
+
+            result = runner.invoke(main, ["export", "--all", "--format", "txt"])
+
+        # Le point clé : pas de RuntimeError "Event loop is closed"
+        assert result.exit_code == 0
+        assert "Event loop is closed" not in (result.output or "")
+
+
+# ---------------------------------------------------------------------------
+# Coverage: edge cases non couverts
+# ---------------------------------------------------------------------------
+
+
+class TestSectionWithNoPages:
+    """Section avec page_ids vide : le continue (cli.py:214) doit être couvert."""
+
+    def test_export_skips_section_with_empty_page_ids(self) -> None:
+        """Une section sans page_ids ne doit pas appeler export_batch."""
+        runner = CliRunner()
+        mock_client = _make_graph_client_mock()
+        mock_export = AsyncMock(return_value=_make_export_report(0))
+
+        empty_sec = HierarchyNode(
+            name="Empty Sec",
+            node_type="section",
+            id="s-empty",
+            page_count=0,
+            page_ids=[],
+        )
+        tree_nodes = [
+            HierarchyNode(name="NB", node_type="notebook", id="nb-1", children=[empty_sec])
+        ]
+
+        with (
+            patch("src.cli.authenticate", return_value=("test-token", MagicMock())),
+            patch("src.cli.GraphClient", return_value=mock_client),
+            patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="test-token"),
+            patch("src.cli.export_batch", new=mock_export),
+            patch("src.cli._is_interactive", return_value=False),
+        ):
+            result = runner.invoke(main, ["export", "--all"])
+
+        assert result.exit_code == 0
+        mock_export.assert_not_called()
+
+
+class TestMsalRefreshBranch:
+    """Couvre la branche isinstance(app, msal.PublicClientApplication) — cli.py:224-229."""
+
+    def test_export_refreshes_token_when_app_is_msal(self) -> None:
+        """Si app est un PublicClientApplication, refresh_token doit être appelé."""
+        import msal
+
+        runner = CliRunner()
+        mock_client = _make_graph_client_mock()
+        mock_client.update_token = MagicMock()
+        mock_export = AsyncMock(return_value=_make_export_report(1))
+
+        msal_app = MagicMock(spec=msal.PublicClientApplication)
+        sec = HierarchyNode(
+            name="Sec",
+            node_type="section",
+            id="s-1",
+            page_count=1,
+            page_ids=["p-1"],
+        )
+        tree_nodes = [HierarchyNode(name="NB", node_type="notebook", id="nb-1", children=[sec])]
+
+        with (
+            patch("src.cli.authenticate", return_value=("test-token", msal_app)),
+            patch("src.cli.GraphClient", return_value=mock_client),
+            patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", return_value="new-token") as mock_refresh,
+            patch("src.cli.export_batch", new=mock_export),
+            patch("src.cli._is_interactive", return_value=False),
+        ):
+            result = runner.invoke(main, ["export", "--all"])
+
+        assert result.exit_code == 0
+        mock_refresh.assert_called_once_with(msal_app)
+
+    def test_export_continues_when_refresh_raises_auth_error(self) -> None:
+        """Si refresh_token lève AuthenticationError, l'export doit continuer."""
+        import msal
+
+        from src.auth import AuthenticationError
+
+        runner = CliRunner()
+        mock_client = _make_graph_client_mock()
+        mock_export = AsyncMock(return_value=_make_export_report(1))
+
+        msal_app = MagicMock(spec=msal.PublicClientApplication)
+        sec = HierarchyNode(
+            name="Sec",
+            node_type="section",
+            id="s-1",
+            page_count=1,
+            page_ids=["p-1"],
+        )
+        tree_nodes = [HierarchyNode(name="NB", node_type="notebook", id="nb-1", children=[sec])]
+
+        with (
+            patch("src.cli.authenticate", return_value=("test-token", msal_app)),
+            patch("src.cli.GraphClient", return_value=mock_client),
+            patch("src.cli.build_tree", new=AsyncMock(return_value=tree_nodes)),
+            patch("src.cli.refresh_token", side_effect=AuthenticationError("expired")),
+            patch("src.cli.export_batch", new=mock_export),
+            patch("src.cli._is_interactive", return_value=False),
+        ):
+            result = runner.invoke(main, ["export", "--all"])
+
+        assert result.exit_code == 0
+        mock_export.assert_called_once()
+
+
+class TestBuildPageTuples:
+    """Couvre _build_page_tuples et _collect_titles — cli.py:370-380."""
+
+    def test_build_page_tuples_returns_id_title_pairs(self) -> None:
+        """_build_page_tuples doit retourner des tuples (page_id, titre)."""
+        from src.cli import _build_page_tuples
+
+        sec = HierarchyNode(
+            name="Sec",
+            node_type="section",
+            id="s-1",
+            page_ids=["p-1", "p-2"],
+            page_titles={"p-1": "Page One", "p-2": "Page Two"},
+        )
+        nb = HierarchyNode(name="NB", node_type="notebook", id="nb-1", children=[sec])
+
+        result = _build_page_tuples([nb], ["p-1", "p-2"])
+
+        assert result == [("p-1", "Page One"), ("p-2", "Page Two")]
+
+    def test_build_page_tuples_falls_back_to_id(self) -> None:
+        """_build_page_tuples doit utiliser l'ID si le titre n'est pas trouvé."""
+        from src.cli import _build_page_tuples
+
+        nb = HierarchyNode(name="NB", node_type="notebook", id="nb-1")
+
+        result = _build_page_tuples([nb], ["p-unknown"])
+
+        assert result == [("p-unknown", "p-unknown")]
+
+    def test_collect_titles_recursive(self) -> None:
+        """_collect_titles doit parcourir récursivement les enfants."""
+        from src.cli import _collect_titles
+
+        sec = HierarchyNode(
+            name="Sec",
+            node_type="section",
+            id="s-1",
+            page_titles={"p-1": "Deep Title"},
+        )
+        nb = HierarchyNode(name="NB", node_type="notebook", id="nb-1", children=[sec])
+        titles: dict[str, str] = {}
+
+        _collect_titles([nb], titles)
+
+        assert titles == {"p-1": "Deep Title"}
+
+
+class TestTreeReturnAfterExit:
+    """Couvre la ligne `return` après ctx.exit(1) dans tree (cli.py:68)."""
+
+    def test_tree_returns_after_ctx_exit_on_auth_error(self) -> None:
+        """Après ctx.exit(1), tree ne doit pas appeler asyncio.run."""
+        from src.auth import AuthenticationError
+
+        runner = CliRunner()
+
+        with (
+            patch("src.cli.authenticate", side_effect=AuthenticationError("fail")),
+            patch("src.cli._async_tree") as mock_async,
+        ):
+            runner.invoke(main, ["tree"])
+            mock_async.assert_not_called()
+
+
+class TestExportReturnAfterExit:
+    """Couvre la ligne `return` après ctx.exit(1) dans export (cli.py:123)."""
+
+    def test_export_returns_after_ctx_exit_on_auth_error(self) -> None:
+        """Après ctx.exit(1), export ne doit pas appeler asyncio.run."""
+        from src.auth import AuthenticationError
+
+        runner = CliRunner()
+
+        with (
+            patch("src.cli.authenticate", side_effect=AuthenticationError("fail")),
+            patch("src.cli._async_export") as mock_async,
+        ):
+            runner.invoke(main, ["export", "--all"])
+            mock_async.assert_not_called()

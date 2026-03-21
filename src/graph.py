@@ -79,6 +79,14 @@ class GraphClient:
             await self._client.aclose()
             self._client = None
 
+    def update_token(self, new_token: str) -> None:
+        """Met à jour le token d'authentification.
+
+        Args:
+            new_token: Nouveau access token Bearer.
+        """
+        self._token = new_token
+
     async def _request(self, url: str) -> httpx.Response:
         """Exécute une requête GET avec retry automatique sur 429.
 

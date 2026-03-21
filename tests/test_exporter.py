@@ -898,3 +898,60 @@ class TestExportBatchFormat:
 
         sig = inspect.signature(export_batch)
         assert sig.parameters["fmt"].default == "pdf"
+
+
+class TestExportBatchResume:
+    """Tests pour le paramètre resume de export_batch."""
+
+    @pytest.mark.asyncio
+    async def test_resume_skips_existing_txt_file(self, tmp_path: Path) -> None:
+        """Avec resume=True, un fichier TXT existant doit être skippé."""
+        existing = tmp_path / "000_Title 1.txt"
+        existing.write_text("already exported content")
+
+        pages = [("page-1", "Title 1"), ("page-2", "Title 2")]
+
+        with patch("src.exporter.asyncio.sleep"):
+            report = await export_batch(
+                pages=pages,
+                output_dir=tmp_path,
+                rate_limit=4,
+                progress=False,
+                fmt="txt",
+                resume=True,
+            )
+
+        assert report.total_pages == 2
+        assert report.exported == 2
+        # Le premier fichier n'a pas été ré-écrit
+        assert existing.read_text() == "already exported content"
+
+    @pytest.mark.asyncio
+    async def test_no_resume_does_not_skip(self, tmp_path: Path) -> None:
+        """Avec resume=False, les fichiers existants doivent être ré-exportés."""
+        existing = tmp_path / "000_Title 1.txt"
+        existing.write_text("old content")
+
+        pages = [("page-1", "Title 1")]
+
+        with patch("src.exporter.asyncio.sleep"):
+            report = await export_batch(
+                pages=pages,
+                output_dir=tmp_path,
+                rate_limit=4,
+                progress=False,
+                fmt="txt",
+                resume=False,
+            )
+
+        assert report.exported == 1
+        content = existing.read_text()
+        assert content != "old content"
+
+    @pytest.mark.asyncio
+    async def test_resume_default_is_true(self) -> None:
+        """Le paramètre resume doit être True par défaut."""
+        import inspect
+
+        sig = inspect.signature(export_batch)
+        assert sig.parameters["resume"].default is True

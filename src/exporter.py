@@ -256,6 +256,7 @@ async def _export_page(
     rate_limit: int,
     pages_count: int,
     fmt: str = "pdf",
+    resume: bool = True,
 ) -> ExportResult:
     """Helper: fetch content and convert one page, then sleep for rate limit.
 
@@ -268,10 +269,26 @@ async def _export_page(
         rate_limit: Max requests per second.
         pages_count: Total number of pages in the batch (used to skip final sleep).
         fmt: Output format — 'pdf' or 'txt'.
+        resume: Skip pages whose output file already exists.
 
     Returns:
         ExportResult for the page.
     """
+    if resume:
+        ext = "txt" if fmt == "txt" else "pdf"
+        safe = sanitize_filename(page_title)
+        expected = output_dir / f"{idx:03d}_{safe}.{ext}"
+        if expected.exists():
+            import click
+
+            click.echo(f"  [SKIP] {page_title}")
+            return ExportResult(
+                page_title=page_title,
+                pdf_path=expected,
+                success=True,
+                size_bytes=expected.stat().st_size,
+            )
+
     if client is not None:
         html_content = await client.get_page_content(page_id)
     else:
@@ -308,6 +325,7 @@ async def export_batch(
     rate_limit: int = 4,
     progress: bool = True,
     fmt: str = "pdf",
+    resume: bool = True,
 ) -> ExportReport:
     """Exporte un lot de pages en respectant le rate limit.
 
@@ -318,6 +336,7 @@ async def export_batch(
         rate_limit: Nombre max de requêtes par seconde.
         progress: Afficher une barre de progression si stdout est un terminal.
         fmt: Format de sortie — 'pdf' (défaut) ou 'txt'.
+        resume: Skip pages whose output file already exists.
 
     Returns:
         Rapport d'export avec statistiques.
@@ -364,6 +383,7 @@ async def export_batch(
                     rate_limit=rate_limit,
                     pages_count=pages_count,
                     fmt=fmt,
+                    resume=resume,
                 )
                 progress_bar.advance(task)
                 results.append(result)
@@ -385,6 +405,7 @@ async def export_batch(
                 rate_limit=rate_limit,
                 pages_count=pages_count,
                 fmt=fmt,
+                resume=resume,
             )
             results.append(result)
             if result.success:

@@ -32,5 +32,29 @@ Plusieurs stratégies de gestion de tokens existent : stockage sur disque, keyri
 - `src/config.py` : `AZURE_CLIENT_ID` et `AZURE_TENANT_ID` via pydantic-settings
 - Scope : `Notes.Read` uniquement
 
+## Amendement — 2026-03-21
+
+### Contexte de l'amendement
+L'expérience utilisateur avec le device code flow à chaque exécution s'est avérée insupportable pour l'export batch de 1163 pages. Chaque `uv run onenote-export` = nouveau process = nouvelle auth = nouveau code à entrer manuellement.
+
+### Nouvelle décision
+**Cache MSAL persistant sur disque** via `msal.SerializableTokenCache` dans `io/cache/msal_cache.bin`.
+
+- Premier run : device code flow classique, cache sauvegardé
+- Runs suivants : `acquire_token_silent()` depuis le cache, 0 interaction
+- Refresh token MSA valide ~24h, renouvelé automatiquement
+- Fallback automatique au device code si le cache est expiré/corrompu
+
+### Raisons (principes premiers, réévaluation)
+1. **UX** : Le device code à chaque run est un bloquant fonctionnel, pas juste un inconvénient
+2. **Sécurité révisée** : Le fichier cache a des permissions `chmod 600` (owner only), dans un répertoire gitignored (`io/cache/`). Le scope `Notes.Read` limite l'impact d'une fuite.
+3. **Simplicité** : `SerializableTokenCache` est stdlib MSAL, pas une dépendance externe. ~15 lignes de code.
+4. **Le risque original (ADR-001)** était "fuite si io/ est exposé". Mitigation : chmod 600 + gitignore + scope lecture seule.
+
+### Alternatives rejetées (amendement)
+- **Keyring OS** : Toujours rejeté — incompatible Docker, dépendance système
+- **Chiffrement Fernet** : YAGNI pour un CLI single-user. Le chmod 600 suffit.
+- **Token en variable d'env** : L'utilisateur devrait copier-coller le token manuellement à chaque session. Pire UX.
+
 ## Référence CDC
 CDC §1.1, §1.2

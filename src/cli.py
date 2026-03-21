@@ -7,8 +7,8 @@ import logging
 
 import click
 
-from src.auth import AuthenticationError, authenticate
-from src.exporter import export_batch
+from src.auth import AuthenticationError, authenticate, refresh_token
+from src.exporter import export_batch, sanitize_filename
 from src.graph import GraphClient
 from src.hierarchy import HierarchyNode, build_tree, display_tree
 
@@ -48,7 +48,7 @@ def main(ctx: click.Context, verbose: bool, no_cache: bool, notebook: str | None
 def auth(ctx: click.Context) -> None:
     """Tester l'authentification Azure AD."""
     try:
-        authenticate()
+        _token, _app = authenticate()
         click.echo("Authentification réussie")
     except AuthenticationError as e:
         click.echo(f"Erreur: {e}", err=True)
@@ -61,19 +61,24 @@ def tree(ctx: click.Context) -> None:
     """Afficher la hiérarchie OneNote avec comptage de pages."""
     no_cache = ctx.obj.get("no_cache", False)
     try:
-        token = authenticate()
+        token, _app = authenticate()
     except (AuthenticationError, ValueError) as e:
         click.echo(f"Erreur d'authentification: {e}", err=True)
         ctx.exit(1)
         return
+    asyncio.run(_async_tree(token, no_cache))
+
+
+async def _async_tree(token: str, no_cache: bool) -> None:
+    """Coroutine pour la commande tree — un seul event loop."""
     client = GraphClient(access_token=token)
     try:
-        nodes: list[HierarchyNode] = asyncio.run(build_tree(client, no_cache=no_cache))
+        nodes = await build_tree(client, no_cache=no_cache)
         output = display_tree(nodes)
         if output:
             click.echo(output)
     finally:
-        asyncio.run(client.close())
+        await client.close()
 
 
 @main.command()
@@ -89,6 +94,9 @@ def tree(ctx: click.Context) -> None:
     default="pdf",
     help="Format de sortie [défaut: pdf]",
 )
+@click.option(
+    "--resume/--no-resume", default=True, help="Skip fichiers déjà exportés [défaut: resume]"
+)
 @click.pass_context
 def export(
     ctx: click.Context,
@@ -97,6 +105,7 @@ def export(
     max_pages: int,
     output_dir: str | None,
     fmt: str,
+    resume: bool,
 ) -> None:
     """Exporter les pages sélectionnées en PDF."""
     from pathlib import Path
@@ -107,56 +116,132 @@ def export(
     out_path: Path = Path(output_dir) if output_dir else settings.export_output_dir
 
     try:
-        token = authenticate()
+        token, app = authenticate()
     except (AuthenticationError, ValueError) as e:
         click.echo(f"Erreur d'authentification: {e}", err=True)
         ctx.exit(1)
         return
-    client = GraphClient(access_token=token)
 
-    try:
-        no_cache = ctx.obj.get("no_cache", False)
-        nodes = asyncio.run(build_tree(client, no_cache=no_cache))
-
-        if not sections and not export_all and _is_interactive():
-            # Mode interactif
-            numbered = _build_numbered_sections(nodes)
+    # Sélection interactive AVANT asyncio.run (click.prompt est sync)
+    no_cache = ctx.obj.get("no_cache", False)
+    interactive_sections: list[HierarchyNode] | None = None
+    if not sections and not export_all and _is_interactive():
+        # Build tree juste pour la sélection interactive
+        nodes_for_selection = asyncio.run(_quick_build_tree(token, no_cache))
+        if nodes_for_selection:
+            numbered = _build_numbered_sections(nodes_for_selection)
             for idx, path, sec in numbered:
                 click.echo(f"  {idx}. {path} ({sec.page_count} pages)")
             selection = click.prompt("Sélection (ex: 1,3,5 ou 1-5)", default="")
             selected_indices = _parse_selection(selection, len(numbered))
-            page_tuples: list[tuple[str, str]] = []
-            for idx in selected_indices:
-                _, _, sec_node = numbered[idx - 1]
-                for pid in sec_node.page_ids:
-                    title = sec_node.page_titles.get(pid, pid)
-                    page_tuples.append((pid, title))
-            pages = page_tuples[:max_pages]
-        else:
-            page_ids = _collect_page_ids(nodes, sections, export_all, max_pages)
-            pages = _build_page_tuples(nodes, page_ids)
+            interactive_sections = [numbered[i - 1][2] for i in selected_indices]
 
+    asyncio.run(
+        _async_export(
+            token=token,
+            app=app,
+            sections=sections,
+            export_all=export_all,
+            max_pages=max_pages,
+            out_path=out_path,
+            rate_limit=settings.graph_rate_limit,
+            fmt=fmt,
+            resume=resume,
+            no_cache=no_cache,
+            interactive_sections=interactive_sections,
+        )
+    )
+
+
+async def _quick_build_tree(token: str, no_cache: bool) -> list[HierarchyNode]:
+    """Build tree dans un event loop dédié (pour la sélection interactive)."""
+    client = GraphClient(access_token=token)
+    try:
+        return await build_tree(client, no_cache=no_cache)
+    finally:
+        await client.close()
+
+
+async def _async_export(
+    token: str,
+    app: object,
+    sections: str | None,
+    export_all: bool,
+    max_pages: int,
+    out_path: object,
+    rate_limit: int,
+    fmt: str,
+    resume: bool,
+    no_cache: bool,
+    interactive_sections: list[HierarchyNode] | None,
+) -> None:
+    """Coroutine pour l'export — un seul event loop pour tout le travail async."""
+    from pathlib import Path as _Path
+
+    import msal
+
+    out = _Path(str(out_path))
+    client = GraphClient(access_token=token)
+    try:
+        nodes = await build_tree(client, no_cache=no_cache)
+
+        if interactive_sections is not None:
+            sections_to_export = interactive_sections
+        else:
+            sections_to_export = _get_sections_to_export(nodes, sections, export_all)
+
+        if not sections_to_export:
+            click.echo("Aucune section sélectionnée.")
+            return
+
+        total_pages = sum(s.page_count for s in sections_to_export)
         if (
             export_all
-            and len(pages) > 200
-            and not click.confirm(f"{len(pages)} pages à exporter. Continuer ?")
+            and total_pages > 200
+            and not click.confirm(f"{total_pages} pages à exporter. Continuer ?")
         ):
             click.echo("Export annulé.")
             return
 
-        report = asyncio.run(
-            export_batch(
-                pages=pages,
-                client=client,
-                output_dir=out_path,
-                rate_limit=settings.graph_rate_limit,
-                fmt=fmt,
+        total_exported = 0
+        total_failed = 0
+        for sec_idx, section_node in enumerate(sections_to_export):
+            section_dir = out / sanitize_filename(section_node.name)
+            pages_list = [
+                (pid, section_node.page_titles.get(pid, pid)) for pid in section_node.page_ids
+            ]
+            if not pages_list:
+                continue
+
+            pages_list = pages_list[:max_pages]
+
+            click.echo(
+                f"\n[{sec_idx + 1}/{len(sections_to_export)}] "
+                f"{section_node.name} ({len(pages_list)} pages)"
             )
-        )
-        if report.exported > 0:
-            click.echo(f"Export réussi : {report.exported} page(s)")
+
+            # Refresh token silencieusement
+            if isinstance(app, msal.PublicClientApplication):
+                try:
+                    new_token = refresh_token(app)
+                    client.update_token(new_token)
+                except AuthenticationError:
+                    pass
+
+            report = await export_batch(
+                pages=pages_list,
+                client=client,
+                output_dir=section_dir,
+                rate_limit=rate_limit,
+                fmt=fmt,
+                resume=resume,
+            )
+            total_exported += report.exported
+            total_failed += report.failed
+
+        click.echo(f"\nTotal: {total_exported} exported, {total_failed} failed")
     finally:
-        asyncio.run(client.close())
+        await client.close()
 
 
 def _is_interactive() -> bool:
@@ -240,7 +325,36 @@ def _collect_sections(
         _collect_sections(child, child_path, sections)
 
 
-def _build_page_tuples(
+def _get_sections_to_export(
+    nodes: list[HierarchyNode],
+    sections: str | None,
+    export_all: bool,
+) -> list[HierarchyNode]:
+    """Collecte les HierarchyNode sections à exporter.
+
+    Args:
+        nodes: Arbre de hiérarchie.
+        sections: Noms séparés par virgule, ou None.
+        export_all: Si True, toutes les sections.
+
+    Returns:
+        Liste de HierarchyNode de type section.
+    """
+    selected = [s.strip() for s in sections.split(",")] if sections else []
+    result: list[HierarchyNode] = []
+
+    def _collect(node: HierarchyNode) -> None:
+        if node.node_type == "section" and (export_all or node.name in selected):
+            result.append(node)
+        for child in node.children:
+            _collect(child)
+
+    for node in nodes:
+        _collect(node)
+    return result
+
+
+def _build_page_tuples(  # pyright: ignore[reportUnusedFunction]
     nodes: list[HierarchyNode],
     page_ids: list[str],
 ) -> list[tuple[str, str]]:
@@ -266,7 +380,7 @@ def _collect_titles(nodes: list[HierarchyNode], titles: dict[str, str]) -> None:
         _collect_titles(node.children, titles)
 
 
-def _collect_page_ids(
+def _collect_page_ids(  # pyright: ignore[reportUnusedFunction]
     nodes: list[HierarchyNode],
     sections: str | None,
     export_all: bool,
