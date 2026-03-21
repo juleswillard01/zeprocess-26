@@ -837,7 +837,7 @@ class TestExportPageToTxt:
 
     @pytest.mark.asyncio
     async def test_export_txt_path_traversal_blocked(self, tmp_path: Path) -> None:
-        """L'export TXT doit bloquer les path traversal."""
+        """Après sanitize, '../../etc/passwd' → 'etcpasswd', reste dans output_dir."""
         from src.exporter import export_page_to_txt
 
         result = await export_page_to_txt(
@@ -848,8 +848,11 @@ class TestExportPageToTxt:
             order=0,
         )
 
-        assert result.success is False
-        assert result.error is not None
+        # sanitize_filename strips ".." and "/" → "etcpasswd"
+        # is_relative_to guard passes since resolved path stays inside output_dir
+        assert result.success is True
+        assert result.pdf_path.exists()
+        assert "etcpasswd" in result.pdf_path.name
 
     @pytest.mark.asyncio
     async def test_export_txt_sanitizes_filename(self, tmp_path: Path) -> None:
@@ -867,6 +870,61 @@ class TestExportPageToTxt:
         assert result.success is True
         assert result.pdf_path.name.startswith("005_")
         assert result.pdf_path.suffix == ".txt"
+
+
+class TestTxtExportSlashInTitle:
+    """Tests pour les titres avec slash — Bug 1 fix."""
+
+    @pytest.mark.asyncio
+    async def test_export_txt_with_slash_in_title_succeeds(self, tmp_path: Path) -> None:
+        """Un titre avec '/' comme 'LR 5/7' doit réussir l'export."""
+        from src.exporter import export_page_to_txt
+
+        result = await export_page_to_txt(
+            page_id="page-slash",
+            page_title="LR 5/7",
+            html_content="<html><body>Contenu légal</body></html>",
+            output_dir=tmp_path,
+            order=0,
+        )
+
+        assert result.success is True
+        assert result.pdf_path.exists()
+        assert result.pdf_path.suffix == ".txt"
+        assert "LR 57" in result.pdf_path.name  # "/" stripped by sanitize
+
+    @pytest.mark.asyncio
+    async def test_export_txt_with_backslash_in_title_succeeds(self, tmp_path: Path) -> None:
+        """Un titre avec backslash doit réussir après sanitize."""
+        from src.exporter import export_page_to_txt
+
+        result = await export_page_to_txt(
+            page_id="page-bs",
+            page_title="Section\\Subsection",
+            html_content="<html><body>Content</body></html>",
+            output_dir=tmp_path,
+            order=1,
+        )
+
+        assert result.success is True
+        assert result.pdf_path.exists()
+
+    @pytest.mark.asyncio
+    async def test_export_txt_with_dotdot_sanitized(self, tmp_path: Path) -> None:
+        """Un titre avec '..' doit être sanitisé mais pas crash."""
+        from src.exporter import export_page_to_txt
+
+        result = await export_page_to_txt(
+            page_id="page-dots",
+            page_title="Note..v2",
+            html_content="<html><body>Content</body></html>",
+            output_dir=tmp_path,
+            order=2,
+        )
+
+        assert result.success is True
+        assert result.pdf_path.exists()
+        # The is_relative_to guard should pass since sanitize removes ".."
 
 
 class TestExportBatchFormat:

@@ -15,7 +15,7 @@ class TestSettings:
         assert settings.azure_tenant_id == "common"
         assert settings.graph_rate_limit == 4
         assert settings.max_pages == 150
-        assert settings.cache_ttl_seconds == 3600
+        assert settings.cache_ttl_seconds == 86400
 
     def test_export_output_dir_is_path(self) -> None:
         """Le dossier d'export doit être un Path."""

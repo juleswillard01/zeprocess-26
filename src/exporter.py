@@ -211,10 +211,6 @@ async def export_page_to_txt(
         ExportResult with the path to the .txt file.
     """
     try:
-        # Reject titles with path traversal sequences before any sanitization.
-        if ".." in page_title or "/" in page_title or "\\" in page_title:
-            raise ValueError(f"Path traversal detected for page {page_id}")
-
         safe_title = sanitize_filename(page_title)
         filename = f"{order:03d}_{safe_title}.txt"
         txt_path = output_dir / filename

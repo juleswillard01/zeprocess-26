@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     export_output_dir: Path = Path("io/exports")
     cache_dir: Path = Path("io/cache")
     graph_rate_limit: int = 4
-    cache_ttl_seconds: int = 3600
+    cache_ttl_seconds: int = 86400
     max_pages: int = 150
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

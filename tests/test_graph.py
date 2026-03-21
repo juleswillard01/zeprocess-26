@@ -352,23 +352,19 @@ class TestGraphClient:
 
     @pytest.mark.asyncio
     async def test_request_raises_after_max_retries_exhausted(self) -> None:
-        """_request doit lever GraphAPIError après 5 réponses 429 consécutives."""
+        """_request doit lever GraphAPIError après 10 réponses 429 consécutives."""
 
         client = _make_client(
             {
                 f"{BASE}/notebooks": [
-                    httpx.Response(429, headers={"Retry-After": "0"}),
-                    httpx.Response(429, headers={"Retry-After": "0"}),
-                    httpx.Response(429, headers={"Retry-After": "0"}),
-                    httpx.Response(429, headers={"Retry-After": "0"}),
-                    httpx.Response(429, headers={"Retry-After": "0"}),
+                    httpx.Response(429, headers={"Retry-After": "0"}) for _ in range(10)
                 ],
             }
         )
 
         with (
             mock.patch("asyncio.sleep", return_value=None),
-            pytest.raises(GraphAPIError, match="Rate limit exceeded after 5 retries"),
+            pytest.raises(GraphAPIError, match="Rate limit exceeded after 10 retries"),
         ):
             await client.list_notebooks()
 
@@ -377,6 +373,72 @@ class TestGraphClient:
         client = GraphClient(access_token="old-token")
         client.update_token("new-token")
         assert client._token == "new-token"
+
+
+class TestRateLimitResilience:
+    """Tests pour la résilience rate limit — Bug 2 fix."""
+
+    @pytest.mark.asyncio
+    async def test_request_succeeds_on_6th_retry(self) -> None:
+        """La requête doit réussir si le 6ème essai passe (ancien max était 5)."""
+        responses = [httpx.Response(429, headers={"Retry-After": "0"}) for _ in range(6)]
+        responses.append(_json_response({"value": [{"id": "nb-1", "displayName": "N1"}]}))
+
+        client = _make_client({f"{BASE}/notebooks": responses})
+
+        with mock.patch("asyncio.sleep", return_value=None):
+            notebooks = await client.list_notebooks()
+
+        assert len(notebooks) == 1
+
+    @pytest.mark.asyncio
+    async def test_request_uses_exponential_backoff_without_retry_after(self) -> None:
+        """Sans header Retry-After, le backoff doit être exponentiel (2^attempt)."""
+        slept: list[float] = []
+        original_sleep = asyncio.sleep
+
+        async def mock_sleep(delay: float) -> None:
+            slept.append(delay)
+            await original_sleep(0)
+
+        # 3 retries without Retry-After header, then success
+        responses = [
+            httpx.Response(429)  # No Retry-After header
+            for _ in range(3)
+        ]
+        responses.append(_json_response({"value": [{"id": "nb-1", "displayName": "N1"}]}))
+
+        client = _make_client({f"{BASE}/notebooks": responses})
+
+        with mock.patch("asyncio.sleep", side_effect=mock_sleep):
+            notebooks = await client.list_notebooks()
+
+        assert len(notebooks) == 1
+        # 2^0=1, 2^1=2, 2^2=4
+        assert slept == [1.0, 2.0, 4.0]
+
+    @pytest.mark.asyncio
+    async def test_exponential_backoff_capped_at_max_retry_after(self) -> None:
+        """Le backoff exponentiel doit être plafonné à _MAX_RETRY_AFTER (60s)."""
+        slept: list[float] = []
+        original_sleep = asyncio.sleep
+
+        async def mock_sleep(delay: float) -> None:
+            slept.append(delay)
+            await original_sleep(0)
+
+        # 8 retries without Retry-After (2^7=128 > 60, should be capped)
+        responses = [httpx.Response(429) for _ in range(8)]
+        responses.append(_json_response({"value": [{"id": "nb-1", "displayName": "N1"}]}))
+
+        client = _make_client({f"{BASE}/notebooks": responses})
+
+        with mock.patch("asyncio.sleep", side_effect=mock_sleep):
+            notebooks = await client.list_notebooks()
+
+        assert len(notebooks) == 1
+        # 2^7=128 capped to 60
+        assert slept[7] == 60.0
 
 
 class TestDownloadResource:

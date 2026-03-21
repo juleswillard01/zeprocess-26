@@ -153,6 +153,37 @@ def export(
     )
 
 
+@main.command()
+@click.option("--dry-run", is_flag=True, help="Afficher le plan sans écrire")
+@click.option(
+    "--output-dir",
+    "-o",
+    type=click.Path(),
+    default="io/md",
+    help="Dossier de sortie [défaut: io/md]",
+)
+@click.pass_context
+def bundle(ctx: click.Context, dry_run: bool, output_dir: str) -> None:
+    """Regrouper les exports TXT en 10 fichiers Markdown thématiques."""
+    from pathlib import Path
+
+    from src.bundler import bundle_all
+    from src.config import get_settings
+
+    settings = get_settings()
+    export_dir = settings.export_output_dir
+    out_path = Path(output_dir)
+
+    click.echo(f"Bundling exports from {export_dir} → {out_path}")
+    if dry_run:
+        click.echo("[DRY RUN]")
+
+    report = bundle_all(export_dir=export_dir, output_dir=out_path, dry_run=dry_run)
+
+    total = sum(report.values())
+    click.echo(f"\nTotal: {total} pages across {len(report)} files")
+
+
 async def _quick_build_tree(token: str, no_cache: bool) -> list[HierarchyNode]:
     """Build tree dans un event loop dédié (pour la sélection interactive)."""
     client = GraphClient(access_token=token)
@@ -238,6 +269,10 @@ async def _async_export(
             )
             total_exported += report.exported
             total_failed += report.failed
+            # Breathing room between sections to avoid rate limit cascading
+            if sec_idx < len(sections_to_export) - 1:
+                click.echo("  Cooldown 5s before next section...")
+                await asyncio.sleep(5.0)
 
         click.echo(f"\nTotal: {total_exported} exported, {total_failed} failed")
     finally:

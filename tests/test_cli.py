@@ -46,9 +46,9 @@ class TestMainGroup:
         assert "tree" in main.commands
         assert "export" in main.commands
 
-    def test_main_group_has_three_commands(self) -> None:
-        """Le groupe main doit avoir exactement 3 commandes."""
-        assert len(main.commands) == 3
+    def test_main_group_has_four_commands(self) -> None:
+        """Le groupe main doit avoir exactement 4 commandes (auth, tree, export, bundle)."""
+        assert len(main.commands) == 4
 
     def test_verbose_flag_is_available(self) -> None:
         """Le flag --verbose/-v doit être disponible sur le groupe main."""

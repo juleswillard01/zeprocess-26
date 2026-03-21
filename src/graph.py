@@ -13,7 +13,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _TRUSTED_NEXTLINK_PREFIX = "https://graph.microsoft.com/"
-_MAX_RETRIES = 5
+_MAX_RETRIES = 10
 _MAX_RETRY_AFTER = 60.0
 
 
@@ -88,10 +88,11 @@ class GraphClient:
         self._token = new_token
 
     async def _request(self, url: str) -> httpx.Response:
-        """Exécute une requête GET avec retry automatique sur 429.
+        """Exécute une requête GET avec retry automatique sur 429/503.
 
-        Utilise une boucle itérative (max 5 tentatives) pour éviter la récursion.
+        Utilise une boucle itérative (max 10 tentatives) pour éviter la récursion.
         Le délai Retry-After est plafonné à 60 secondes.
+        Backoff exponentiel (2^attempt) quand le header Retry-After est absent.
 
         Args:
             url: URL complète à appeler.
@@ -108,12 +109,15 @@ class GraphClient:
         for attempt in range(_MAX_RETRIES):
             response = await client.get(url, headers=headers)
 
-            if response.status_code == 429:
-                raw = response.headers.get("Retry-After", "1")
-                try:
-                    retry_after = min(float(raw), _MAX_RETRY_AFTER)
-                except ValueError:
-                    retry_after = 1.0
+            if response.status_code in (429, 503):
+                raw = response.headers.get("Retry-After")
+                if raw:
+                    try:
+                        retry_after = min(float(raw), _MAX_RETRY_AFTER)
+                    except ValueError:
+                        retry_after = min(2.0**attempt, _MAX_RETRY_AFTER)
+                else:
+                    retry_after = min(2.0**attempt, _MAX_RETRY_AFTER)
                 logger.warning(
                     "Rate limited (attempt %d/%d), sleeping %.1fs",
                     attempt + 1,
